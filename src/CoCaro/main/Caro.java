@@ -42,6 +42,7 @@ public class Caro extends JFrame {
     private final Color neonRed    = new Color(255, 70, 70);
     private final Color neonYellow = new Color(255, 220, 0);
     private final Color btnColor   = new Color(60, 120, 200);
+    private final Color exitColor  = new Color(200, 60, 60);
 
     public Caro() {
         setTitle("Caro 20x20");
@@ -92,12 +93,94 @@ public class Caro extends JFrame {
         return back;
     }
 
+    /**
+     * Tạo nút bo tròn nhỏ dùng cho thanh điều khiển trên cùng của Menu
+     * (nút Bật/tắt âm thanh bên trái và nút Thoát game bên phải).
+     *
+     * @param text  nội dung hiển thị trên nút (icon/emoji hoặc chữ ngắn)
+     * @param bg    màu nền của nút
+     */
+    private JButton createTopBarButton(String text, Color bg) {
+        JButton b = new JButton(text);
+        b.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        b.setForeground(Color.WHITE);
+        b.setBackground(bg);
+        b.setOpaque(true);
+        b.setBorderPainted(false);
+        b.setFocusPainted(false);
+        b.setContentAreaFilled(true);
+        b.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        b.setPreferredSize(new Dimension(110, 40));
+        b.addActionListener(e -> { if (soundOn) SoundManager.play("click.wav"); });
+        return b;
+    }
+
     // ── MENU ────────────────────────────────────────────────────────────────────
 
+    /**
+     * UC-08: Quay lại menu chính / Màn hình menu chính.
+     * UC-07: Bật/tắt âm thanh (nút điều khiển bên trái thanh top bar).
+     *
+     * Bước 1: Tạo thanh top bar gồm 2 nút:
+     *         - Bên trái : nút Bật/tắt âm thanh (Sound ON/OFF)
+     *         - Bên phải : nút Thoát game (Exit)
+     * Bước 2: Tạo phần nội dung chính của menu (Title + 2 nút chọn chế độ chơi).
+     * Bước 3: Gộp top bar + nội dung chính vào 1 panel theo BorderLayout.
+     */
     private JPanel menuUI() {
-        JPanel p = new JPanel(new GridLayout(3, 1, 30, 30));
-        p.setBorder(BorderFactory.createEmptyBorder(100, 80, 100, 80));
-        p.setBackground(bgDark);
+        JPanel root = new JPanel(new BorderLayout());
+        root.setBackground(bgDark);
+
+        // ── Bước 1: Thanh top bar (trái: Sound, phải: Exit) ─────────────────────
+        JPanel topBar = new JPanel(new BorderLayout());
+        topBar.setBackground(bgDark);
+        topBar.setBorder(BorderFactory.createEmptyBorder(15, 15, 0, 15));
+
+        // Nút Bật/tắt âm thanh - đặt bên trái (UC-07)
+        // Quy ước hiển thị: đang ở trạng thái ON thì nút ghi "Bật: âm thanh",
+        // đang ở trạng thái OFF thì nút ghi "Tắt: âm thanh".
+        JButton soundToggleBtn = createTopBarButton(
+                soundOn ? "Bật: âm thanh" : "Tắt: âm thanh", btnColor);
+        soundToggleBtn.addActionListener(e -> {
+            // UC-07 - Bước: đảo trạng thái soundOn và cập nhật giao diện nút
+            soundOn = !soundOn;
+            soundToggleBtn.setText(soundOn ? "Bật: âm thanh" : "Tắt: âm thanh");
+
+            // Nếu đang có nhạc nền thì bật/tắt theo trạng thái mới
+            if (bgMusic != null) {
+                if (soundOn) bgMusic.start();
+                else         bgMusic.stop();
+            }
+            // Đồng bộ với nút sound trong màn hình chơi (nếu đã được tạo)
+            if (soundBtn != null) {
+                soundBtn.setText(soundOn ? "Bật: âm thanh" : "Tắt: âm thanh");
+            }
+        });
+
+        // Nút Thoát game - đặt bên phải
+        JButton exitBtn = createTopBarButton("Thoát", exitColor);
+        exitBtn.addActionListener(e -> {
+            // Bước: xác nhận trước khi thoát để tránh thoát nhầm
+            int confirm = JOptionPane.showConfirmDialog(
+                    this,
+                    "Bạn có chắc muốn thoát game không?",
+                    "Xác nhận thoát",
+                    JOptionPane.YES_NO_OPTION,
+                    JOptionPane.QUESTION_MESSAGE
+            );
+            if (confirm == JOptionPane.YES_OPTION) {
+                if (bgMusic != null) bgMusic.stop();
+                System.exit(0);
+            }
+        });
+
+        topBar.add(soundToggleBtn, BorderLayout.WEST);
+        topBar.add(exitBtn,        BorderLayout.EAST);
+
+        // ── Bước 2: Nội dung chính của menu (Title + chọn chế độ chơi) ──────────
+        JPanel center = new JPanel(new GridLayout(3, 1, 30, 30));
+        center.setBorder(BorderFactory.createEmptyBorder(80, 80, 80, 80));
+        center.setBackground(bgDark);
 
         JLabel title = new JLabel("CỜ CARO", SwingConstants.CENTER);
         title.setFont(new Font("Segoe UI", Font.BOLD, 40));
@@ -116,10 +199,15 @@ public class Caro extends JFrame {
             layout.show(mainPanel, "difficulty");
         });
 
-        p.add(title);
-        p.add(pvp);
-        p.add(bot);
-        return p;
+        center.add(title);
+        center.add(pvp);
+        center.add(bot);
+
+        // ── Bước 3: Gộp top bar (NORTH) + center (CENTER) ───────────────────────
+        root.add(topBar, BorderLayout.NORTH);
+        root.add(center, BorderLayout.CENTER);
+
+        return root;
     }
 
     // ── DIFFICULTY ──────────────────────────────────────────────────────────────
@@ -239,11 +327,11 @@ public class Caro extends JFrame {
 
         JButton reset = createBtn("Chơi lại");
         JButton back  = createBtn("Quay lại Menu");
-        soundBtn = createBtn("Sound ON");
+        soundBtn = createBtn(soundOn ? "Bật: âm thanh" : "Tắt: âm thanh");
 
         soundBtn.addActionListener(e -> {
             soundOn = !soundOn;
-            soundBtn.setText(soundOn ? "Sound ON" : "Sound OFF");
+            soundBtn.setText(soundOn ? "Bật: âm thanh" : "Tắt: âm thanh");
             if (bgMusic != null) {
                 if (soundOn) bgMusic.start();
                 else         bgMusic.stop();
