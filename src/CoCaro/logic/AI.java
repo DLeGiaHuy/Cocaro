@@ -2,7 +2,30 @@ package CoCaro.logic;
 
 import javax.swing.*;
 import java.util.Random;
-
+//======================================================
+//UC-03: Chọn độ khó AI
+//
+//Mục đích:
+//Cho phép người chơi lựa chọn mức độ thử thách.
+//
+//Luồng xử lý:
+//1. Người chơi chọn Dễ / Thường / Khó.
+//2. Hệ thống lưu giá trị difficulty.
+//3. AI sử dụng thuật toán tương ứng.
+//
+//Dễ:
+//AI đánh ngẫu nhiên.
+//
+//Thường:
+//50% ngẫu nhiên.
+//50% đánh theo thuật toán.
+//
+//Khó:
+//Luôn tìm nước đi tốt nhất.
+//
+//Kết quả:
+//AI hoạt động theo độ khó đã chọn.
+//======================================================
 public class AI {
 
     public static int[] getMove(JButton[][] board, int difficulty) {
